@@ -1,52 +1,77 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import axios from 'axios';
-import PokemonList from './PokemonList';
+import PokemonCard from './PokemonCard';
 
-//https://pokeapi.co/api/v2/pokemon
+const App = () => {
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pokemons, setPokemons] = useState([]);
+  const [selectedPokemon, setSelectedPokemon] = useState(null);
+  const [lastPage, setLastPage] = useState(); //variavel
 
-function App() {
-  const [currentPageUrl, setCurrentPageUrl] = useState(
-    'https://pokeapi.co/api/v2/pokemon',
-  );
-  const [pokemon, setPokemon] = useState([]);
-  const [nextBtnUrl, setNextBtnUrl] = useState();
-  const [prevBtnUrl, setPrevBtnUrl] = useState();
+  useEffect(async () => {
+    const response = await axios.get(
+      'https://pokeapi.co/api/v2/pokemon?limit=20&offset=' + currentPage * 20,
+    );
+    // parseInt(setLastPage,10)
+    //console.log(response.data.count / 20);
 
-  useEffect(() => {
-    axios.get(currentPageUrl).then((res) => {
-      setNextBtnUrl(res.data.next);
-      setPrevBtnUrl(res.data.previous);
+    setLastPage(parseInt(response.data.count / 20, 10));
 
-      setPokemon(res.data.results);
-    });
-  }, [currentPageUrl]);
-
-  const Pagination = (e) => {
-    if (e.target.textContent === 'Next') {
-      setCurrentPageUrl(nextBtnUrl);
+    const pokemons2 = [];
+    for (const pokemon of response.data.results) {
+      const response2 = await axios.get(pokemon.url);
+      pokemons2.push(response2.data);
     }
-    if (e.target.textContent === 'Previous') {
-      setCurrentPageUrl(prevBtnUrl);
-    }
-  };
+
+    setPokemons(pokemons2);
+  }, [currentPage]);
 
   return (
     <div className="App">
-      {pokemon.map((pokemon) => (
-        <PokemonList pokemon={pokemon} />
-      ))}
-      <div className="page-buttons">
-        <button onClick={Pagination} className="previous">
-          Previous
-        </button>
+      {selectedPokemon ? (
+        <div PokemonCard></div>
+      ) : (
+        <>
+          {pokemons.map((pokemon) => (
+            <div
+              onClick={() => {
+                setSelectedPokemon(pokemon);
+              }}
+            >
+              <p>{pokemon.name}</p>
+              <img src={pokemon.sprites.front_default} alt={pokemon.name} />
+            </div>
+          ))}
+          <div className="page-buttons">
+            <button
+              onClick={() => {
+                if (currentPage == 0) {
+                  return;
+                }
+                setCurrentPage(currentPage - 1);
+              }}
+              className="previous"
+            >
+              Previous
+            </button>
 
-        <button onClick={Pagination} className="next">
-          Next
-        </button>
-      </div>
+            <button
+              onClick={() => {
+                if (currentPage === lastPage) {
+                  return;
+                }
+                setCurrentPage(currentPage + 1);
+              }}
+              className="next"
+            >
+              Next
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
-}
+};
 
 export default App;
